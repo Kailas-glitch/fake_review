@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spot Check | Login</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+
+  <div class="page">
+    <div class="login-card">
+
+      <!-- Logo -->
+      <div class="header">
+        <h1 class="title">Welcome</h1>
+        <p class="subtitle">Please sign in to your account</p>
+      </div>
+
+      <!-- Login Form -->
+      <form method="POST" action="{{ url_for('login') }}">
+  <div class="field">
+    <label>Username</label>
+    <input
+      type="text"
+      name="username"
+      placeholder="Enter your username"
+      required
+    />
+  </div>
+
+  <div class="field">
+    <label>Password</label>
+    <input
+      type="password"
+      name="password"
+      placeholder="Enter your password"
+      required
+    />
+  </div>
+
+  <button type="submit">Login</button>
+</form>
+
+      <!-- Footer -->
+      <div class="footer">
+        <a href="#">Forgot password?</a>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

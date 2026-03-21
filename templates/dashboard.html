@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fake Review Detection</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<header>
+  <div class="logo">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+  </div>
+
+  <a href="{{ url_for('logout') }}" class="logout-btn">
+    <i class="fa-solid fa-right-from-bracket"></i> Logout
+  </a>
+</header>
+
+<div class="container">
+
+  <h1>FAKE REVIEW DETECTION</h1>
+
+  <!-- Analyze Section -->
+  <div class="card">
+    <h3>Analyze Review</h3>
+
+    <form id="analyzeForm">
+
+      <div class="textarea-wrapper">
+        <textarea name="review" id="reviewText"
+          placeholder="Paste review here..."></textarea>
+
+        <label class="upload-icon">
+          <i class="fa-solid fa-plus"></i>
+          <input type="file" id="fileInput"
+                 accept=".csv,.txt"
+                 hidden>
+        </label>
+      </div>
+
+      <button type="submit" class="analyze-btn">
+        <i class="fa-solid fa-shield"></i> Analyze Review
+      </button>
+
+    </form>
+  </div>
+
+ <!-- Statistics Section -->
+<div class="card stats-card">
+  <h3>Overall Summary</h3>
+
+  <div class="stats-grid">
+    <div class="stat-box">
+      <h4>Total Reviews</h4>
+      <p>{{ total_analyses }}</p>
+    </div>
+
+    <div class="stat-box fake">
+      <h4>Fake Reviews</h4>
+      <p>{{ total_fake }}</p>
+    </div>
+
+    <div class="stat-box genuine">
+      <h4>Genuine Reviews</h4>
+      <p>{{ total_genuine }}</p>
+    </div>
+  </div>
+</div>
+
+<!-- 🔥 BLOCKCHAIN SECTION (SEPARATE CARD) -->
+<div class="card">
+  <h3>Blockchain Stored Reviews</h3>
+
+  {% if blockchain %}
+    <div style="max-height: 300px; overflow-y: auto;">
+      <ul>
+        {% for block in blockchain %}
+          <li style="margin-bottom: 10px;">
+            <strong>Index:</strong> {{ block.index }} <br>
+            <strong>Data:</strong> {{ block.data }} <br>
+            <strong>Timestamp:</strong> {{ block.timestamp }} <br>
+            <hr>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% else %}
+    <p>No blockchain data available.</p>
+  {% endif %}
+</div>
+
+</div>
+
+<script>
+document.getElementById("fileInput").addEventListener("change", function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById("reviewText").value = e.target.result;
+    };
+    reader.readAsText(file);
+});
+
+document.getElementById("analyzeForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const review = document.getElementById("reviewText").value.trim();
+    if (!review) {
+        alert("Please enter or upload a review.");
+        return;
+    }
+
+    fetch("http://127.0.0.1:5000/api/predict", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: "review=" + encodeURIComponent(review)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.analysis_id) {
+            window.location.href = "/results/" + data.analysis_id;
+        } else {
+            alert(data.error || "Error analyzing review");
+        }
+    })
+    .catch(error => {
+        alert("Something went wrong");
+        console.error(error);
+    });
+});
+</script>
+
+</body>
+</html>
