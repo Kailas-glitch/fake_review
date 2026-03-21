@@ -57,12 +57,12 @@ class Analysis(db.Model):
     total_genuine = db.Column(db.Integer, default=0)
 
 # ================= MODEL =================
-MAX_WORDS = 5000
-MAX_LEN = 100
+MAX_WORDS = 20000
+MAX_LEN = 150
 stop_words = set(stopwords.words('english'))
 stemmer = PorterStemmer()
 
-model = load_model('models/fake_review_model.h5')
+model = load_model('models/fake_review_model.keras')
 with open('models/tokenizer.pkl', 'rb') as handle:
     tokenizer = pickle.load(handle)
 
