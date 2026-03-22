@@ -250,7 +250,7 @@ for r in test_reviews:
 # ==================================
 # 12. SAVE MODEL
 # ==================================
-model.save("models/fake_review_model.keras")
+model.save("models/fake_review_model.h5")
 
 with open("models/tokenizer.pkl", "wb") as f:
 

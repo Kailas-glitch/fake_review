@@ -62,7 +62,7 @@ MAX_LEN = 150
 stop_words = set(stopwords.words('english'))
 stemmer = PorterStemmer()
 
-model = load_model('models/fake_review_model.keras')
+model = load_model('models/fake_review_model.h5')
 with open('models/tokenizer.pkl', 'rb') as handle:
     tokenizer = pickle.load(handle)
 
