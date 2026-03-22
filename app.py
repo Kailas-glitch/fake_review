@@ -14,7 +14,7 @@ nltk.download('punkt')
 from nltk.corpus import stopwords
 from nltk.tokenize import wordpunct_tokenize
 from nltk.stem import PorterStemmer
-from tensorflow.keras.models import load_model
+import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from datetime import datetime
 import csv
@@ -62,7 +62,7 @@ MAX_LEN = 150
 stop_words = set(stopwords.words('english'))
 stemmer = PorterStemmer()
 
-model = load_model('models/fake_review_model.h5')
+model = tf.keras.models.load_model('models/fake_review_model.h5', compile=False)
 with open('models/tokenizer.pkl', 'rb') as handle:
     tokenizer = pickle.load(handle)
 
