@@ -9,8 +9,7 @@ import numpy as np
 import pandas as pd
 import re
 import nltk
-nltk.download('stopwords')
-nltk.download('punkt')
+nltk.data.path.append("/opt/render/nltk_data")
 from nltk.corpus import stopwords
 from nltk.tokenize import wordpunct_tokenize
 from nltk.stem import PorterStemmer
