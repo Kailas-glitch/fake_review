@@ -252,31 +252,20 @@ for r in test_reviews:
     print(r, "→", predict_review(r))
 
 # ==================================
-# 12. SAVE MODEL + TOKENIZER (FIXED)
+# 12. SAVE MODEL + TOKENIZER (FINAL)
 # ==================================
 import os
 
 os.makedirs("models", exist_ok=True)
 
-# Save model
-model.save("models/fake_review_model.h5")
+# ✅ Save model (TensorFlow format)
+model.save("models/fake_review_model.keras")
 
-# Save tokenizer as JSON (SAFE FOR DEPLOYMENT)
+# ✅ Save tokenizer (JSON — deployment safe)
 tokenizer_json = tokenizer.to_json()
 
 with open("models/tokenizer.json", "w") as f:
     f.write(tokenizer_json)
 
-print("\nModel and tokenizer saved successfully.")
+print("\n✅ Model and tokenizer saved successfully.")
 
-
-import tf2onnx
-
-spec = (tf.TensorSpec((None, MAX_LEN), tf.int32, name="input"),)
-
-model_proto, _ = tf2onnx.convert.from_keras(model, input_signature=spec)
-
-with open("models/model.onnx", "wb") as f:
-    f.write(model_proto.SerializeToString())
-
-print("ONNX model saved!")

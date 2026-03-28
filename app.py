@@ -27,7 +27,7 @@ from nltk.tokenize import wordpunct_tokenize
 from nltk.stem import PorterStemmer
 from tensorflow.keras.models import load_model
 
-model = load_model("models/fake_review_model.h5")
+model = load_model("models/fake_review_model.keras")
 from datetime import datetime
 import csv
 
