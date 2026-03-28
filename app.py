@@ -86,7 +86,7 @@ from tensorflow.keras.preprocessing.text import tokenizer_from_json
 import json
 
 with open('models/tokenizer.json') as f:
-    data = json.load(f)
+    data = f.read()  # 🔥 READ AS STRING
 
 tokenizer = tokenizer_from_json(data)
 
