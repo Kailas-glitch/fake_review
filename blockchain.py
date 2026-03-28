@@ -1,6 +1,7 @@
 import hashlib
 import json
 from time import time
+from datetime import datetime
 
 class Blockchain:
 
@@ -11,7 +12,7 @@ class Blockchain:
     def create_block(self, proof, previous_hash):
         block = {
             'index': len(self.chain) + 1,
-            'timestamp': str(time()),
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),  # ← readable format
             'proof': proof,
             'previous_hash': previous_hash,
             'data': None
@@ -46,6 +47,7 @@ class Blockchain:
 
         block = self.create_block(proof, previous_hash)
         block['data'] = review_data
+        self.chain[-1]['data']=review_data
 
         return block
 

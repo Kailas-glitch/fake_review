@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Blockchain Data</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+<style>
+body {
+  font-family: Arial;
+  background: #f4f6f9;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+}
+
+.table-container {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+}
+
+th {
+  background: #2c3e50;
+  color: white;
+}
+
+tr:hover {
+  background: #f1f1f1;
+}
+</style>
+
+</head>
+<body>
+
+<h1>Blockchain Stored Reviews</h1>
+
+<p><strong>Total Blocks:</strong> {{ length }}</p>
+<p><strong>Chain Valid:</strong> {{ valid }}</p>
+
+{% if blockchain %}
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>Index</th>
+<th>User</th>
+<th>Review</th>
+<th>Confidence</th>
+<th>Timestamp</th>
+</tr>
+</thead>
+<tbody>
+{% for block in blockchain %}
+  {% if block.data %}
+  <tr>
+    <td>{{ block.index }}</td>
+    <td>{{ block.data.user }}</td>
+    <td>{{ block.data.review }}</td>
+    <td>{{ block.data.confidence }}</td>
+    <td>{{ block.timestamp }}</td>
+  </tr>
+  {% endif %}
+{% endfor %}
+</tbody>
+
+</table>
+</div>
+{% else %}
+<p>No blockchain data available.</p>
+{% endif %}
+
+</body>
+</html>

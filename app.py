@@ -14,8 +14,8 @@ nltk.download('punkt')
 from nltk.corpus import stopwords
 from nltk.tokenize import wordpunct_tokenize
 from nltk.stem import PorterStemmer
-import tensorflow as tf
-from tensorflow.keras.preprocessing.sequence import pad_sequences
+import onnxruntime as ort
+from tensorflow.keras.preprocessing.sequence import pad_sequences  # keep this
 from datetime import datetime
 import csv
 
@@ -62,7 +62,7 @@ MAX_LEN = 150
 stop_words = set(stopwords.words('english'))
 stemmer = PorterStemmer()
 
-model = tf.keras.models.load_model('models/fake_review_model.h5', compile=False)
+onnx_session = ort.InferenceSession("models/model.onnx")
 with open('models/tokenizer.pkl', 'rb') as handle:
     tokenizer = pickle.load(handle)
 
@@ -82,16 +82,18 @@ def predict_review(text):
     seq = tokenizer.texts_to_sequences([clean])
     pad = pad_sequences(seq, maxlen=MAX_LEN)
 
-    prob_fake = float(model.predict(pad)[0][0])
+    input_name = onnx_session.get_inputs()[0].name
+    input_data = pad.astype(np.float32)
 
-    # 🔎 Debug line
-    print("Raw probability:", prob_fake)
+    outputs = onnx_session.run(None, {input_name: input_data})
+    prob_fake = float(outputs[0][0][0])
+
+    print("ONNX probability:", prob_fake)
 
     if prob_fake > 0.5:
-        return 1, prob_fake          # 1 = Fake
+        return 0, prob_fake
     else:
-        return 0, 1 - prob_fake      # 0 = Genuine
-
+        return 1, 1 - prob_fake
 
 # ================= ROUTES =================
 @app.route('/')
@@ -324,17 +326,23 @@ def results(analysis_id):
     )
 
 
-# 🔥 VIEW BLOCKCHAIN
 @app.route('/blockchain')
 @login_required
 def view_blockchain():
-    return jsonify({
-        'chain': blockchain.chain,
-        'length': len(blockchain.chain),
-        'valid': blockchain.is_chain_valid()
-    })
+    try:
+        blockchain_data = blockchain.chain or []
+        is_valid = blockchain.is_chain_valid() if blockchain_data else True
+    except Exception as e:
+        print("Blockchain error:", e)
+        blockchain_data = []
+        is_valid = False
 
-
+    return render_template(
+        'blockchain.html',
+        blockchain=blockchain_data,
+        length=len(blockchain_data),
+        valid=is_valid
+    )
 @app.route('/logout')
 @login_required
 def logout():
