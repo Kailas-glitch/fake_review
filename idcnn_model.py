@@ -5,6 +5,9 @@ import pandas as pd
 import re
 import nltk
 import numpy as np
+import json
+import os
+import subprocess
 import tensorflow as tf
 
 tf.random.set_seed(42)
@@ -63,15 +66,12 @@ stemmer = PorterStemmer()
 def preprocess_text(text):
     text = str(text).lower()
     text = re.sub(r'[^a-z\s]', '', text)
-
     tokens = wordpunct_tokenize(text)
-
     cleaned = [
         stemmer.stem(w)
         for w in tokens
         if w not in stop_words and len(w) > 2
     ]
-
     return " ".join(cleaned)
 
 data['clean_review'] = data['review'].apply(preprocess_text)
@@ -113,34 +113,21 @@ class_weights = dict(enumerate(class_weights))
 print("Class Weights:", class_weights)
 
 # ==================================
-# 8. BUILD MODEL (FIXED INPUT)
+# 8. BUILD MODEL
 # ==================================
 model = Sequential([
-
     Input(shape=(MAX_LEN,), dtype='int32'),
-
-    Embedding(
-        input_dim=MAX_WORDS,
-        output_dim=128
-    ),
-
+    Embedding(input_dim=MAX_WORDS, output_dim=128),
     Conv1D(256, 5, activation='relu'),
     BatchNormalization(),
-
     Conv1D(128, 3, activation='relu'),
     BatchNormalization(),
-
     Conv1D(64, 3, activation='relu'),
-
     GlobalMaxPooling1D(),
-
     Dropout(0.5),
-
     Dense(128, activation='relu'),
     Dropout(0.7),
-
     Dense(64, activation='relu'),
-
     Dense(1, activation='sigmoid')
 ])
 
@@ -187,48 +174,55 @@ def predict_review(text):
     clean = preprocess_text(text)
     seq = tokenizer.texts_to_sequences([clean])
     pad = pad_sequences(seq, maxlen=MAX_LEN)
-
     prob = float(model.predict(pad, verbose=0)[0][0])
-
     label = "Fake" if prob > 0.5 else "Genuine"
     confidence = prob if prob > 0.5 else 1 - prob
     return label, round(confidence, 4)
 
 print("\n--- TEST RESULTS ---")
-
 test_reviews = [
     "This product is amazing and works perfectly",
     "Worst product ever scam seller",
     "i7t9uh uifhtnki"
 ]
-
 for r in test_reviews:
     print(r, "→", predict_review(r))
 
 # ==================================
-# 12. SAVE TOKENIZER + CONVERT TO ONNX
+# 12. SAVE TOKENIZER AS PLAIN JSON
 # ==================================
-import os
-import subprocess
-import numpy as np
-
 os.makedirs("models", exist_ok=True)
 
-# Replace the tokenizer save block with this:
-import json
-os.makedirs("models", exist_ok=True)
-
+# ✅ Save as plain JSON (no keras dependency needed in deployment)
 with open("models/tokenizer.json", "w") as f:
     json.dump({
         'word_index': tokenizer.word_index,
         'num_words': tokenizer.num_words
     }, f)
 
-print("✅ Tokenizer saved successfully!")
+print("✅ Tokenizer saved as plain JSON!")
 
+# Verify it saved correctly
+with open("models/tokenizer.json") as f:
+    d = json.load(f)
+print("Keys:", list(d.keys()))
+print("Vocab size:", len(d['word_index']))
+print("Num words:", d['num_words'])
+
+# ==================================
+# 13. EXPORT & CONVERT TO ONNX
+# ==================================
+
+# Force model build with dummy input
+dummy_input = np.zeros((1, MAX_LEN), dtype=np.int32)
+model.predict(dummy_input)
+
+# Save as SavedModel
 saved_model_path = "models/saved_model"
 model.export(saved_model_path)
-# ✅ FIX: Convert using tf2onnx CLI via subprocess (works on all tf2onnx versions)
+print("✅ SavedModel exported!")
+
+# Convert to ONNX via subprocess
 result = subprocess.run(
     [
         "python", "-m", "tf2onnx.convert",
@@ -245,4 +239,4 @@ if result.returncode != 0:
     print("❌ ONNX conversion failed:")
     print(result.stderr)
 else:
-    print("\n✅ ONNX model saved successfully!")
+    print("✅ ONNX model saved successfully!")
