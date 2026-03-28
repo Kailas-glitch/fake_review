@@ -99,16 +99,16 @@ class Analysis(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     total_fake = db.Column(db.Integer, default=0)
     total_genuine = db.Column(db.Integer, default=0)
-
-# Runs under gunicorn too (not just __main__)
-with app.app_context():
-    db.create_all()
-    from sqlalchemy import inspect
-    if inspect(db.engine).has_table("user"):
+try:
+    with app.app_context():
+        db.create_all()
+        print("✅ Database tables created")
         if not User.query.filter_by(username="admin").first():
             db.session.add(User(username="admin", password=generate_password_hash("1234")))
             db.session.commit()
-            print("Default user created: admin / 1234")
+            print("✅ Default user created: admin / 1234")
+except Exception as e:
+    print(f"⚠️ Startup DB error (non-fatal): {e}")
 
 # ==================================
 # HELPERS
