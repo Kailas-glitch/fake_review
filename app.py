@@ -15,7 +15,6 @@ from nltk.corpus import stopwords
 from nltk.tokenize import wordpunct_tokenize
 from nltk.stem import PorterStemmer
 import onnxruntime as ort
-from tensorflow.keras.preprocessing.sequence import pad_sequences  # keep this
 from datetime import datetime
 import csv
 
@@ -55,6 +54,15 @@ class Analysis(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     total_fake = db.Column(db.Integer, default=0)
     total_genuine = db.Column(db.Integer, default=0)
+
+def pad_sequences(sequences, maxlen):
+    padded = []
+    for seq in sequences:
+        if len(seq) > maxlen:
+            padded.append(seq[-maxlen:])
+        else:
+            padded.append([0] * (maxlen - len(seq)) + seq)
+    return np.array(padded)
 
 # ================= MODEL =================
 MAX_WORDS = 20000
