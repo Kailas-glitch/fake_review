@@ -107,18 +107,21 @@ def predict_review(text):
     pad = pad_sequences(seq, maxlen=MAX_LEN)
 
     input_name = onnx_session.get_inputs()[0].name
-    input_data = pad.astype(np.float32)
+
+    input_data = pad.astype(np.int64)
+
+    print("Input:", input_data.shape)
 
     outputs = onnx_session.run(None, {input_name: input_data})
+
     prob_fake = float(outputs[0][0][0])
 
     print("ONNX probability:", prob_fake)
 
     if prob_fake > 0.5:
-        return 0, prob_fake
+        return 1, prob_fake   # Fake
     else:
-        return 1, 1 - prob_fake
-
+        return 0, 1 - prob_fake   # Genuine
 # ================= ROUTES =================
 @app.route('/')
 def index():
