@@ -218,6 +218,14 @@ def api_predict():
 
         prediction, confidence = predict_review(review)
 
+        # your logic...
+
+        return jsonify({...})
+
+    except Exception as e:
+        print("ERROR IN /api/predict:", str(e))   # ✅ HERE
+        return jsonify({'error': str(e)}), 500
+
         # 🔥 BLOCKCHAIN — store only GENUINE reviews (prediction == 0)
         if prediction == 0:
             review_data = {
