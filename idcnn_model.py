@@ -214,15 +214,20 @@ import numpy as np
 
 os.makedirs("models", exist_ok=True)
 
-# Save tokenizer
-tokenizer_json = tokenizer.to_json()
-with open("models/tokenizer.json", "w") as f:
-    f.write(tokenizer_json)
+# Replace the tokenizer save block with this:
+import json
+os.makedirs("models", exist_ok=True)
 
-# Save as SavedModel first
+with open("models/tokenizer.json", "w") as f:
+    json.dump({
+        'word_index': tokenizer.word_index,
+        'num_words': tokenizer.num_words
+    }, f)
+
+print("✅ Tokenizer saved successfully!")
+
 saved_model_path = "models/saved_model"
 model.export(saved_model_path)
-
 # ✅ FIX: Convert using tf2onnx CLI via subprocess (works on all tf2onnx versions)
 result = subprocess.run(
     [
