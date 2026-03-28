@@ -9,7 +9,20 @@ import numpy as np
 import pandas as pd
 import re
 import nltk
-nltk.data.path.append("/opt/render/nltk_data")
+
+nltk_data_path = "/opt/render/nltk_data"
+os.makedirs(nltk_data_path, exist_ok=True)
+nltk.data.path.append(nltk_data_path)
+
+try:
+    nltk.data.find('corpora/stopwords')
+except LookupError:
+    nltk.download('stopwords', download_dir=nltk_data_path)
+
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt', download_dir=nltk_data_path)
 from nltk.corpus import stopwords
 from nltk.tokenize import wordpunct_tokenize
 from nltk.stem import PorterStemmer
@@ -372,3 +385,6 @@ if __name__ == '__main__':
             print("Default user created: admin / 1234")
 
     app.run(debug=True)
+
+port = int(os.environ.get("PORT", 5000))
+app.run(host="0.0.0.0", port=port)
