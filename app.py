@@ -25,7 +25,9 @@ except LookupError:
 from nltk.corpus import stopwords
 from nltk.tokenize import wordpunct_tokenize
 from nltk.stem import PorterStemmer
-import onnxruntime as ort
+from tensorflow.keras.models import load_model
+
+model = load_model("models/fake_review_model.h5")
 from datetime import datetime
 import csv
 
@@ -81,7 +83,7 @@ MAX_LEN = 150
 stop_words = set(stopwords.words('english'))
 stemmer = PorterStemmer()
 
-onnx_session = ort.InferenceSession("models/model.onnx")
+
 from tensorflow.keras.preprocessing.text import tokenizer_from_json
 import json
 
@@ -106,22 +108,14 @@ def predict_review(text):
     seq = tokenizer.texts_to_sequences([clean])
     pad = pad_sequences(seq, maxlen=MAX_LEN)
 
-    input_name = onnx_session.get_inputs()[0].name
+    prob_fake = float(model.predict(pad, verbose=0)[0][0])
 
-    input_data = pad.astype(np.int64)
-
-    print("Input:", input_data.shape)
-
-    outputs = onnx_session.run(None, {input_name: input_data})
-
-    prob_fake = float(outputs[0][0][0])
-
-    print("ONNX probability:", prob_fake)
+    print("TF probability:", prob_fake)
 
     if prob_fake > 0.5:
-        return 1, prob_fake   # Fake
+        return 0, prob_fake
     else:
-        return 0, 1 - prob_fake   # Genuine
+        return 1, 1 - prob_fake
 # ================= ROUTES =================
 @app.route('/')
 def index():
@@ -206,7 +200,6 @@ def analysis():
     return render_template('analysis.html')
 
 
-# 🔥 MAIN API (Prediction + Blockchain)
 @app.route('/api/predict', methods=['POST'])
 @login_required
 def api_predict():
@@ -218,15 +211,7 @@ def api_predict():
 
         prediction, confidence = predict_review(review)
 
-        # your logic...
-
-        return jsonify({...})
-
-    except Exception as e:
-        print("ERROR IN /api/predict:", str(e))   # ✅ HERE
-        return jsonify({'error': str(e)}), 500
-
-        # 🔥 BLOCKCHAIN — store only GENUINE reviews (prediction == 0)
+        # 🔥 BLOCKCHAIN — store only GENUINE reviews
         if prediction == 0:
             review_data = {
                 'user': current_user.username,
@@ -253,6 +238,7 @@ def api_predict():
         db.session.add(analysis)
         db.session.commit()
 
+        # ✅ FINAL RESPONSE (ONLY RETURN HERE)
         return jsonify({
             'result': 'Fake' if prediction == 1 else 'Genuine',
             'confidence': round(confidence * 100, 2),
@@ -262,8 +248,8 @@ def api_predict():
         })
 
     except Exception as e:
+        print("ERROR IN /api/predict:", str(e))
         return jsonify({'error': str(e)}), 500
-
 
 @app.route('/api/upload', methods=['POST'])
 @login_required
