@@ -384,7 +384,7 @@ if __name__ == '__main__':
             db.session.commit()
             print("Default user created: admin / 1234")
 
-    app.run(debug=True)
 
-port = int(os.environ.get("PORT", 5000))
-app.run(host="0.0.0.0", port=port)
+
+        port = int(os.environ.get("PORT", 5000))  # 🔥 IMPORTANT
+        app.run(host="0.0.0.0", port=port)  # 🔥 IMPORTANT
