@@ -25,7 +25,7 @@ except LookupError:
 from nltk.corpus import stopwords
 from nltk.tokenize import wordpunct_tokenize
 from nltk.stem import PorterStemmer
-from tensorflow.keras.models import load_model
+
 
 
 print("Current working dir:", os.getcwd())
