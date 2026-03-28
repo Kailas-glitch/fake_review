@@ -5,7 +5,10 @@ import pandas as pd
 import re
 import nltk
 import numpy as np
-import pickle
+import json
+import tensorflow as tf
+tf.random.set_seed(42)
+np.random.seed(42)
 
 from nltk.corpus import stopwords
 from nltk.tokenize import wordpunct_tokenize
@@ -59,9 +62,9 @@ stop_words = set(stopwords.words('english'))
 stemmer = PorterStemmer()
 
 def preprocess_text(text):
-
     text = str(text).lower()
 
+    # remove non letters
     text = re.sub(r'[^a-z\s]', '', text)
 
     tokens = wordpunct_tokenize(text)
@@ -69,11 +72,10 @@ def preprocess_text(text):
     cleaned = [
         stemmer.stem(w)
         for w in tokens
-        if w not in stop_words
+        if w not in stop_words and len(w) > 2
     ]
 
     return " ".join(cleaned)
-
 data['clean_review'] = data['review'].apply(preprocess_text)
 
 # ==================================
@@ -225,7 +227,9 @@ def predict_review(text):
 
     print("Raw Probability:", prob)
 
-    if prob > 0.5:
+    THRESHOLD = 0.6  # 🔥 tune this
+
+    if prob > THRESHOLD:
         return "Fake", prob
     else:
         return "Genuine", 1 - prob
@@ -248,12 +252,31 @@ for r in test_reviews:
     print(r, "→", predict_review(r))
 
 # ==================================
-# 12. SAVE MODEL
+# 12. SAVE MODEL + TOKENIZER (FIXED)
 # ==================================
+import os
+
+os.makedirs("models", exist_ok=True)
+
+# Save model
 model.save("models/fake_review_model.h5")
 
-with open("models/tokenizer.pkl", "wb") as f:
+# Save tokenizer as JSON (SAFE FOR DEPLOYMENT)
+tokenizer_json = tokenizer.to_json()
 
-    pickle.dump(tokenizer, f)
+with open("models/tokenizer.json", "w") as f:
+    f.write(tokenizer_json)
 
 print("\nModel and tokenizer saved successfully.")
+
+
+import tf2onnx
+
+spec = (tf.TensorSpec((None, MAX_LEN), tf.int32, name="input"),)
+
+model_proto, _ = tf2onnx.convert.from_keras(model, input_signature=spec)
+
+with open("models/model.onnx", "wb") as f:
+    f.write(model_proto.SerializeToString())
+
+print("ONNX model saved!")

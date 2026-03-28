@@ -4,7 +4,6 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import os
-import pickle
 import numpy as np
 import pandas as pd
 import re
@@ -83,8 +82,13 @@ stop_words = set(stopwords.words('english'))
 stemmer = PorterStemmer()
 
 onnx_session = ort.InferenceSession("models/model.onnx")
-with open('models/tokenizer.pkl', 'rb') as handle:
-    tokenizer = pickle.load(handle)
+from tensorflow.keras.preprocessing.text import tokenizer_from_json
+import json
+
+with open('models/tokenizer.json') as f:
+    data = json.load(f)
+
+tokenizer = tokenizer_from_json(data)
 
 @login_manager.user_loader
 def load_user(user_id):
