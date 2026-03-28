@@ -5,8 +5,8 @@ import pandas as pd
 import re
 import nltk
 import numpy as np
-import json
 import tensorflow as tf
+
 tf.random.set_seed(42)
 np.random.seed(42)
 
@@ -23,6 +23,7 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import (
+    Input,
     Embedding,
     Conv1D,
     GlobalMaxPooling1D,
@@ -43,10 +44,8 @@ nltk.download('stopwords')
 # ==================================
 data = pd.read_csv("Fake_Reviews_Dataset1.csv", encoding="latin-1")
 
-print("Columns:", data.columns)
-
-data = data[['text','label']]
-data = data.rename(columns={'text':'review'})
+data = data[['text', 'label']]
+data = data.rename(columns={'text': 'review'})
 
 data = data.dropna(subset=['label'])
 data['label'] = data['label'].astype(int)
@@ -63,8 +62,6 @@ stemmer = PorterStemmer()
 
 def preprocess_text(text):
     text = str(text).lower()
-
-    # remove non letters
     text = re.sub(r'[^a-z\s]', '', text)
 
     tokens = wordpunct_tokenize(text)
@@ -76,6 +73,7 @@ def preprocess_text(text):
     ]
 
     return " ".join(cleaned)
+
 data['clean_review'] = data['review'].apply(preprocess_text)
 
 # ==================================
@@ -88,7 +86,6 @@ tokenizer = Tokenizer(num_words=MAX_WORDS)
 tokenizer.fit_on_texts(data['clean_review'])
 
 sequences = tokenizer.texts_to_sequences(data['clean_review'])
-
 X = pad_sequences(sequences, maxlen=MAX_LEN)
 
 y = data['label'].values
@@ -99,11 +96,7 @@ print("Input Shape:", X.shape)
 # 6. TRAIN TEST SPLIT
 # ==================================
 X_train, X_test, y_train, y_test = train_test_split(
-    X,
-    y,
-    test_size=0.2,
-    random_state=42,
-    shuffle=True
+    X, y, test_size=0.2, random_state=42, shuffle=True
 )
 
 # ==================================
@@ -120,58 +113,35 @@ class_weights = dict(enumerate(class_weights))
 print("Class Weights:", class_weights)
 
 # ==================================
-# 8. BUILD STRONGER 1D CNN MODEL
+# 8. BUILD MODEL (FIXED INPUT)
 # ==================================
 model = Sequential([
 
+    Input(shape=(MAX_LEN,), dtype='int32'),
+
     Embedding(
         input_dim=MAX_WORDS,
-        output_dim=128,
-        input_length=MAX_LEN
+        output_dim=128
     ),
 
-    Conv1D(
-        filters=256,
-        kernel_size=5,
-        activation='relu'
-    ),
-
+    Conv1D(256, 5, activation='relu'),
     BatchNormalization(),
 
-    Conv1D(
-        filters=128,
-        kernel_size=3,
-        activation='relu'
-    ),
-
+    Conv1D(128, 3, activation='relu'),
     BatchNormalization(),
 
-    Conv1D(
-        filters=64,
-        kernel_size=3,
-        activation='relu'
-    ),
+    Conv1D(64, 3, activation='relu'),
 
     GlobalMaxPooling1D(),
 
     Dropout(0.5),
 
-    Dense(
-        128,
-        activation='relu'
-    ),
-
+    Dense(128, activation='relu'),
     Dropout(0.7),
 
-    Dense(
-        64,
-        activation='relu'
-    ),
+    Dense(64, activation='relu'),
 
-    Dense(
-        1,
-        activation='sigmoid'
-    )
+    Dense(1, activation='sigmoid')
 ])
 
 model.compile(
@@ -179,7 +149,6 @@ model.compile(
     loss='binary_crossentropy',
     metrics=['accuracy']
 )
-model.build(input_shape=(None, MAX_LEN))
 
 model.summary()
 
@@ -205,10 +174,9 @@ history = model.fit(
 # ==================================
 # 10. EVALUATION
 # ==================================
-y_pred = (model.predict(X_test) > 0.5).astype(int)
+y_pred = (model.predict(X_test, verbose=0) > 0.5).astype(int)
 
 print("\nAccuracy:", accuracy_score(y_test, y_pred))
-
 print("\nClassification Report:\n")
 print(classification_report(y_test, y_pred))
 
@@ -216,56 +184,60 @@ print(classification_report(y_test, y_pred))
 # 11. TEST PREDICTIONS
 # ==================================
 def predict_review(text):
-
     clean = preprocess_text(text)
-
     seq = tokenizer.texts_to_sequences([clean])
-
     pad = pad_sequences(seq, maxlen=MAX_LEN)
 
-    prob = model.predict(pad)[0][0]
+    prob = float(model.predict(pad, verbose=0)[0][0])
 
-    print("Raw Probability:", prob)
-
-    THRESHOLD = 0.6  # 🔥 tune this
-
-    if prob > THRESHOLD:
-        return "Fake", prob
-    else:
-        return "Genuine", 1 - prob
-
+    label = "Fake" if prob > 0.5 else "Genuine"
+    confidence = prob if prob > 0.5 else 1 - prob
+    return label, round(confidence, 4)
 
 print("\n--- TEST RESULTS ---")
 
 test_reviews = [
-
     "This product is amazing and works perfectly",
-
     "Worst product ever scam seller",
-
     "i7t9uh uifhtnki"
-
 ]
 
 for r in test_reviews:
-
     print(r, "→", predict_review(r))
 
 # ==================================
-# 12. SAVE MODEL + TOKENIZER (FINAL)
+# 12. SAVE TOKENIZER + CONVERT TO ONNX
 # ==================================
 import os
+import subprocess
+import numpy as np
 
 os.makedirs("models", exist_ok=True)
 
-# ✅ Save model (TensorFlow format)
-model.save("models/fake_review_model.keras")
-
-# ✅ Save tokenizer (JSON — deployment safe)
+# Save tokenizer
 tokenizer_json = tokenizer.to_json()
-
 with open("models/tokenizer.json", "w") as f:
     f.write(tokenizer_json)
 
-print("\n✅ Model and tokenizer saved successfully.")
+# Save as SavedModel first
+saved_model_path = "models/saved_model"
+model.export(saved_model_path)
 
+# ✅ FIX: Convert using tf2onnx CLI via subprocess (works on all tf2onnx versions)
+result = subprocess.run(
+    [
+        "python", "-m", "tf2onnx.convert",
+        "--saved-model", saved_model_path,
+        "--output", "models/model.onnx",
+        "--opset", "13"
+    ],
+    capture_output=True,
+    text=True
+)
+
+print(result.stdout)
+if result.returncode != 0:
+    print("❌ ONNX conversion failed:")
+    print(result.stderr)
+else:
+    print("\n✅ ONNX model saved successfully!")

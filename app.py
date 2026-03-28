@@ -30,7 +30,18 @@ from tensorflow.keras.models import load_model
 
 print("Current working dir:", os.getcwd())
 print("Files in models folder:", os.listdir("models") if os.path.exists("models") else "No models folder")
-model = load_model("models/fake_review_model.keras")
+import onnxruntime as ort
+
+# SAFE LOAD
+MODEL_PATH = "models/model.onnx"
+
+if not os.path.exists(MODEL_PATH):
+    raise FileNotFoundError(f"Model not found at {MODEL_PATH}")
+
+onnx_session = ort.InferenceSession(MODEL_PATH)
+
+
+print("✅ ONNX model loaded successfully")
 from datetime import datetime
 import csv
 
@@ -109,16 +120,15 @@ def preprocess_text(text):
 def predict_review(text):
     clean = preprocess_text(text)
     seq = tokenizer.texts_to_sequences([clean])
-    pad = pad_sequences(seq, maxlen=MAX_LEN)
+    pad = pad_sequences(seq, maxlen=MAX_LEN).astype(np.int32)
 
-    prob_fake = float(model.predict(pad, verbose=0)[0][0])
+    input_name = onnx_session.get_inputs()[0].name
+    prob = onnx_session.run(None, {input_name: pad})[0][0][0]
 
-    print("TF probability:", prob_fake)
-
-    if prob_fake > 0.5:
-        return 0, prob_fake
+    if prob > 0.5:
+        return 1, prob
     else:
-        return 1, 1 - prob_fake
+        return 0, 1 - prob
 # ================= ROUTES =================
 @app.route('/')
 def index():
@@ -241,12 +251,16 @@ def api_predict():
         db.session.add(analysis)
         db.session.commit()
 
-        # ✅ FINAL RESPONSE (ONLY RETURN HERE)
+        # Query AFTER commit for accurate counts
+        analyses = Analysis.query.filter_by(user_id=current_user.id).all()
+        total_fake = sum(1 for a in analyses if a.result == 1)
+        total_genuine = sum(1 for a in analyses if a.result == 0)
+
         return jsonify({
             'result': 'Fake' if prediction == 1 else 'Genuine',
             'confidence': round(confidence * 100, 2),
-            'total_fake': analysis.total_fake,
-            'total_genuine': analysis.total_genuine,
+            'total_fake': total_fake,
+            'total_genuine': total_genuine,
             'analysis_id': analysis.id
         })
 
