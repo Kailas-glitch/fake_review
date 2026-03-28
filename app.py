@@ -27,6 +27,9 @@ from nltk.tokenize import wordpunct_tokenize
 from nltk.stem import PorterStemmer
 from tensorflow.keras.models import load_model
 
+
+print("Current working dir:", os.getcwd())
+print("Files in models folder:", os.listdir("models") if os.path.exists("models") else "No models folder")
 model = load_model("models/fake_review_model.keras")
 from datetime import datetime
 import csv
